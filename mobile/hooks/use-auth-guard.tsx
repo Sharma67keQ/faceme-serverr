@@ -1,0 +1,36 @@
+import { Redirect } from "expo-router";
+import { PropsWithChildren } from "react";
+import { AppBootstrap } from "@/components/app-bootstrap";
+import { useAuthStore } from "@/store/auth-store";
+
+export const AuthGuard = ({ children }: PropsWithChildren) => {
+  const { accessToken, isHydrated, user } = useAuthStore();
+
+  if (!isHydrated) {
+    return <AppBootstrap />;
+  }
+
+  if (!accessToken) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (!user?.isOnboardingComplete) {
+    return <Redirect href={"/(onboarding)/setup" as never} />;
+  }
+
+  return children;
+};
+
+export const GuestGuard = ({ children }: PropsWithChildren) => {
+  const { accessToken, isHydrated, user } = useAuthStore();
+
+  if (!isHydrated) {
+    return <AppBootstrap />;
+  }
+
+  if (accessToken) {
+    return <Redirect href={(user?.isOnboardingComplete ? "/(tabs)" : "/(onboarding)/setup") as never} />;
+  }
+
+  return children;
+};
