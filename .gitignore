@@ -18,3 +18,4 @@ pnpm-debug.log*
 .postgres-data
 .postgres.log
 .npm-cache
+faceme-env-backup/

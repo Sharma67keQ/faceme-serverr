@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "start": "npm run dev:mobile",
     "dev": "node scripts/dev.mjs",
     "build:server": "npm --prefix server run build",
     "start:server": "npm --prefix server run start:prod",
@@ -19,8 +20,5 @@
     "db:migrate": "npm --prefix server run prisma:migrate",
     "db:generate": "npm --prefix server run prisma:generate",
     "db:seed": "npm --prefix server run prisma:seed"
-  },
-  "dependencies": {
-    "expo-video": "^55.0.11"
   }
 }
