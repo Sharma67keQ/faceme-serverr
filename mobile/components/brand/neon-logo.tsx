@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 import { colors, gradients, radius } from "@/utils/theme";
 
 type NeonLogoProps = {
@@ -45,7 +45,20 @@ export const NeonLogo = ({ size = 44, animated = false }: NeonLogoProps) => {
     >
       <LinearGradient colors={gradients.logo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.bubble, { borderRadius }]}>
         <View style={[styles.inner, { borderRadius: borderRadius - 3 }]}>
-          <Text style={[styles.face, { fontSize: size * 0.45, lineHeight: size * 0.5 }]}>◡</Text>
+          <View style={[styles.eye, { height: size * 0.08, left: size * 0.17, top: size * 0.2, width: size * 0.08 }]} />
+          <View style={[styles.eye, { height: size * 0.08, right: size * 0.17, top: size * 0.2, width: size * 0.08 }]} />
+          <View
+            style={[
+              styles.smile,
+              {
+                borderBottomWidth: Math.max(2, size * 0.055),
+                borderRadius: size * 0.2,
+                bottom: size * 0.15,
+                height: size * 0.17,
+                width: size * 0.28,
+              },
+            ]}
+          />
         </View>
         <View
           style={[
@@ -64,11 +77,11 @@ export const NeonLogo = ({ size = 44, animated = false }: NeonLogoProps) => {
 
 const styles = StyleSheet.create({
   glow: {
+    elevation: 12,
     shadowColor: colors.energy,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.55,
     shadowRadius: 18,
-    elevation: 12,
   },
   bubble: {
     alignItems: "center",
@@ -79,18 +92,22 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   inner: {
-    alignItems: "center",
-    backgroundColor: "rgba(11, 11, 18, 0.24)",
+    backgroundColor: "rgba(11, 11, 18, 0.22)",
     height: "72%",
-    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
     width: "72%",
   },
-  face: {
-    color: colors.text,
-    fontWeight: "900",
-    includeFontPadding: false,
-    marginTop: -2,
-    textAlign: "center",
+  eye: {
+    backgroundColor: colors.text,
+    borderRadius: 999,
+    position: "absolute",
+  },
+  smile: {
+    borderBottomColor: colors.text,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    position: "absolute",
   },
   tail: {
     borderLeftColor: "transparent",

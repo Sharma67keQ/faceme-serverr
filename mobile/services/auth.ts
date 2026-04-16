@@ -4,15 +4,17 @@ import { User } from "@/types/domain";
 
 export const authService = {
   async register(payload: {
+    name?: string;
     email: string;
     username: string;
     password: string;
-    firstName: string;
+    firstName?: string;
+    lastName?: string;
   }) {
     const { data } = await api.post<AuthResponse>("/auth/register", payload);
     return data;
   },
-  async login(payload: { email: string; password: string }) {
+  async login(payload: { identifier: string; password: string }) {
     const { data } = await api.post<AuthResponse>("/auth/login", payload);
     return data;
   },

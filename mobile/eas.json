@@ -19,8 +19,8 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_API_URL": "https://faceme-server.onrender.com/api",
-        "EXPO_PUBLIC_SOCKET_URL": "https://faceme-server.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://faceme-serverr.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://faceme-serverr.onrender.com"
       }
     },
     "production": {
@@ -30,8 +30,8 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production",
-        "EXPO_PUBLIC_API_URL": "https://faceme-server.onrender.com/api",
-        "EXPO_PUBLIC_SOCKET_URL": "https://faceme-server.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://faceme-serverr.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://faceme-serverr.onrender.com"
       }
     }
   },

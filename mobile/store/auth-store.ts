@@ -14,12 +14,14 @@ type AuthState = {
   setSession: (payload: { user: User; accessToken: string }) => void;
   refreshSession: () => Promise<string | null>;
   clearSession: () => Promise<void>;
-  signIn: (payload: { email: string; password: string }) => Promise<void>;
+  signIn: (payload: { identifier: string; password: string }) => Promise<void>;
   signUp: (payload: {
+    name?: string;
     email: string;
     username: string;
     password: string;
-    firstName: string;
+    firstName?: string;
+    lastName?: string;
   }) => Promise<void>;
   hydrate: () => Promise<void>;
   signOut: () => Promise<void>;

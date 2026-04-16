@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { StatusCodes } from "http-status-codes";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { logger } from "../lib/logger.js";
 import { ApiError } from "../utils/api-error.js";
 import {
   signAccessToken,
@@ -18,7 +20,7 @@ type RegisterInput = {
 };
 
 type LoginInput = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
@@ -57,36 +59,77 @@ export const authService = {
       where: {
         OR: [{ email: input.email }, { username: input.username }],
       },
-      select: { id: true },
+      select: { email: true, username: true },
     });
 
     if (existing) {
-      throw new ApiError(StatusCodes.CONFLICT, "Email or username already in use");
+      if (existing.email === input.email) {
+        logger.warn("auth.register_conflict", {
+          email: input.email,
+          username: input.username,
+          conflict: "email",
+        });
+        throw new ApiError(StatusCodes.CONFLICT, "This email address is already in use");
+      }
+
+      logger.warn("auth.register_conflict", {
+        email: input.email,
+        username: input.username,
+        conflict: "username",
+      });
+      throw new ApiError(StatusCodes.CONFLICT, "This username is already taken");
     }
 
     const passwordHash = await bcrypt.hash(input.password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        email: input.email,
-        username: input.username,
-        passwordHash,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        wallet: {
-          create: {},
+    try {
+      const user = await prisma.user.create({
+        data: {
+          email: input.email,
+          username: input.username,
+          passwordHash,
+          firstName: input.firstName,
+          lastName: input.lastName,
+          wallet: {
+            create: {},
+          },
         },
-      },
-      select: publicUserSelect,
-    });
+        select: publicUserSelect,
+      });
 
-    const tokens = await this.issueTokens(user.id, user.username);
-    return { user, ...tokens };
+      const tokens = await this.issueTokens(user.id, user.username);
+      return { user, ...tokens };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const target = Array.isArray(error.meta?.target) ? error.meta.target.join(",") : String(error.meta?.target ?? "");
+
+        logger.warn("auth.register_unique_constraint", {
+          email: input.email,
+          username: input.username,
+          target,
+        });
+
+        if (target.includes("email")) {
+          throw new ApiError(StatusCodes.CONFLICT, "This email address is already in use");
+        }
+
+        if (target.includes("username")) {
+          throw new ApiError(StatusCodes.CONFLICT, "This username is already taken");
+        }
+
+        throw new ApiError(StatusCodes.CONFLICT, "Email or username already in use");
+      }
+
+      throw error;
+    }
   },
 
   async login(input: LoginInput) {
-    const user = await prisma.user.findUnique({
-      where: { email: input.email },
+    const normalizedIdentifier = input.identifier.trim().toLowerCase();
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: normalizedIdentifier }, { username: normalizedIdentifier }],
+      },
       select: {
         ...publicUserSelect,
         passwordHash: true,

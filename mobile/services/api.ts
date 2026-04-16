@@ -27,6 +27,7 @@ api.interceptors.response.use(
       method: error.config?.method,
       status: error.response?.status,
       message: error.message,
+      response: error.response?.data,
     });
     const status = error.response?.status;
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;

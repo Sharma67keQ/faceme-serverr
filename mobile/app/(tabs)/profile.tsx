@@ -58,7 +58,7 @@ export default function ProfileScreen() {
     <Screen>
       <View style={styles.hero}>
         <View style={styles.heroTop}>
-          <Avatar name={user?.firstName ?? user?.username ?? "F"} size={82} />
+          <Avatar name={user?.firstName ?? user?.username ?? "?"} size={82} />
           <View style={styles.heroMeta}>
             <Text style={styles.name}>{user?.firstName ?? "Your profile"}</Text>
             <Text style={styles.username}>@{user?.username ?? "faceme"}</Text>

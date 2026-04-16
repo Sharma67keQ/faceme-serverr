@@ -126,7 +126,7 @@ export default function FeedScreen() {
 
       <View style={styles.composerCard}>
         <View style={styles.composerRow}>
-          <Avatar name={user?.firstName ?? user?.username ?? "F"} size={46} />
+          <Avatar name={user?.firstName ?? user?.username ?? "?"} size={46} />
           <Pressable style={styles.composerInput} onPress={() => router.push("/(tabs)/create")}>
             <Text style={styles.composerPlaceholder}>Maxaa maskaxdaada ku jira?</Text>
           </Pressable>
