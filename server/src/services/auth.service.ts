@@ -80,9 +80,9 @@ export const authService = {
       throw new ApiError(StatusCodes.CONFLICT, "This username is already taken");
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 12);
-
     try {
+      const passwordHash = await bcrypt.hash(input.password, 12);
+
       const user = await prisma.user.create({
         data: {
           email: input.email,
@@ -90,12 +90,23 @@ export const authService = {
           passwordHash,
           firstName: input.firstName,
           lastName: input.lastName,
-          wallet: {
-            create: {},
-          },
         },
         select: publicUserSelect,
       });
+
+      try {
+        await prisma.wallet.create({
+          data: {
+            userId: user.id,
+          },
+        });
+      } catch (walletError) {
+        logger.error("auth.register_wallet_create_failed", {
+          email: input.email,
+          username: input.username,
+          message: walletError instanceof Error ? walletError.message : "Unknown wallet error",
+        });
+      }
 
       const tokens = await this.issueTokens(user.id, user.username);
       return { user, ...tokens };
@@ -119,6 +130,13 @@ export const authService = {
 
         throw new ApiError(StatusCodes.CONFLICT, "Email or username already in use");
       }
+
+      logger.error("auth.register_failed", {
+        email: input.email,
+        username: input.username,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
 
       throw error;
     }
