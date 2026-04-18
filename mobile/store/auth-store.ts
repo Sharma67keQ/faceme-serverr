@@ -4,14 +4,18 @@ import { registerAuthSessionHandlers } from "@/services/auth-session";
 import { chatService } from "@/services/chat";
 import { tokenStorage } from "@/utils/storage";
 import { User } from "@/types/domain";
+import { getErrorMessage, isConnectionError } from "@/utils/errors";
+import { logger } from "@/utils/logger";
 
 type AuthState = {
   user: User | null;
   accessToken: string | null;
   isHydrated: boolean;
   isRefreshing: boolean;
+  bootError: string | null;
   setUser: (user: User) => void;
   setSession: (payload: { user: User; accessToken: string }) => void;
+  clearBootError: () => void;
   refreshSession: () => Promise<string | null>;
   clearSession: () => Promise<void>;
   signIn: (payload: { identifier: string; password: string }) => Promise<void>;
@@ -32,54 +36,75 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isHydrated: false,
   isRefreshing: false,
+  bootError: null,
   setUser(user) {
     set({ user });
   },
   setSession({ user, accessToken }) {
-    set({ user, accessToken, isHydrated: true });
+    set({ user, accessToken, isHydrated: true, bootError: null });
+  },
+  clearBootError() {
+    set({ bootError: null });
   },
   async signIn(payload) {
     const result = await authService.login(payload);
     await tokenStorage.setTokens(result.accessToken, result.refreshToken);
-    set({ user: result.user, accessToken: result.accessToken, isHydrated: true });
+    set({ user: result.user, accessToken: result.accessToken, isHydrated: true, bootError: null });
   },
   async signUp(payload) {
     const result = await authService.register(payload);
     await tokenStorage.setTokens(result.accessToken, result.refreshToken);
-    set({ user: result.user, accessToken: result.accessToken, isHydrated: true });
+    set({ user: result.user, accessToken: result.accessToken, isHydrated: true, bootError: null });
   },
   async hydrate() {
+    set({ bootError: null });
+
     try {
       const accessToken = await tokenStorage.getAccessToken();
 
       if (!accessToken) {
-        set({ isHydrated: true });
+        set({ isHydrated: true, bootError: null });
         return;
       }
 
       try {
         const user = await authService.fetchMe();
-        set({ user, accessToken, isHydrated: true });
-      } catch {
+        set({ user, accessToken, isHydrated: true, bootError: null });
+      } catch (error) {
+        if (isConnectionError(error)) {
+          const message = getErrorMessage(error, "Connection error. Check your network and try again.");
+          logger.error("Auth hydration failed due to connection error", message);
+          set({ accessToken, isHydrated: true, bootError: message });
+          return;
+        }
+
         const nextAccessToken = await useAuthStore.getState().refreshSession();
 
         if (!nextAccessToken) {
           await useAuthStore.getState().clearSession();
-          set({ isHydrated: true });
+          set({ isHydrated: true, bootError: null });
           return;
         }
 
         try {
           const user = await authService.fetchMe();
-          set({ user, accessToken: nextAccessToken, isHydrated: true });
-        } catch {
+          set({ user, accessToken: nextAccessToken, isHydrated: true, bootError: null });
+        } catch (retryError) {
+          if (isConnectionError(retryError)) {
+            const message = getErrorMessage(retryError, "Connection error. Check your network and try again.");
+            logger.error("Auth hydration retry failed due to connection error", message);
+            set({ accessToken: nextAccessToken, isHydrated: true, bootError: message });
+            return;
+          }
+
           await useAuthStore.getState().clearSession();
-          set({ isHydrated: true });
+          set({ isHydrated: true, bootError: null });
         }
       }
-    } catch {
+    } catch (error) {
+      logger.error("Auth hydration crashed", error);
       await useAuthStore.getState().clearSession();
-      set({ isHydrated: true });
+      set({ isHydrated: true, bootError: null });
     }
   },
   async refreshSession() {

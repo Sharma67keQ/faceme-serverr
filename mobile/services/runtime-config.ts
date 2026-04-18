@@ -84,3 +84,11 @@ export const runtimeConfig = {
     defaultSocketBase,
   ),
 };
+
+if (isProductionLike) {
+  if (runtimeConfig.apiBaseUrl.includes("localhost") || runtimeConfig.apiBaseUrl.includes("127.0.0.1")) {
+    logger.error("[runtime-config] Production API URL resolved to a local URL", runtimeConfig.apiBaseUrl);
+  } else {
+    logger.info("[runtime-config] Production API URL", runtimeConfig.apiBaseUrl);
+  }
+}

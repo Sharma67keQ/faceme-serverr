@@ -1,12 +1,11 @@
 export const logger = {
   error: (...args: unknown[]) => {
-    if (__DEV__) {
-      console.error(...args);
-    }
+    console.error(...args);
   },
   warn: (...args: unknown[]) => {
-    if (__DEV__) {
-      console.warn(...args);
-    }
+    console.warn(...args);
+  },
+  info: (...args: unknown[]) => {
+    console.info(...args);
   },
 };

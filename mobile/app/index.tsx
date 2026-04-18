@@ -13,5 +13,5 @@ export default function Index() {
     return <Redirect href="/(onboarding)" />;
   }
 
-  return <Redirect href={(user?.isOnboardingComplete ? "/" : "/setup") as never} />;
+  return <Redirect href={(user?.isOnboardingComplete ? "/(tabs)" : "/(onboarding)/setup") as never} />;
 }

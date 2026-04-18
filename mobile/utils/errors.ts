@@ -58,3 +58,8 @@ export const getErrorMessage = (error: unknown, fallback: string) => {
   const normalized = normalizeRequestError(error);
   return normalized.message || fallback;
 };
+
+export const isConnectionError = (error: unknown) => {
+  const normalized = normalizeRequestError(error);
+  return normalized.kind === "offline" || normalized.kind === "timeout" || normalized.kind === "server";
+};

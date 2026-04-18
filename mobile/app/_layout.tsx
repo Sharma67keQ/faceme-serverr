@@ -6,6 +6,7 @@ import { StyleSheet, View } from "react-native";
 import { AppBootstrap } from "@/components/app-bootstrap";
 import { AppErrorState } from "@/components/app-error-state";
 import { RealtimeBridge } from "@/components/realtime-bridge";
+import { RootErrorBoundary } from "@/components/root-error-boundary";
 import { TopNavigation } from "@/components/top-navigation";
 import { I18nProvider } from "@/services/i18n";
 import { useAuthStore } from "@/store/auth-store";
@@ -46,6 +47,7 @@ export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const bootError = useAuthStore((state) => state.bootError);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -74,22 +76,33 @@ export default function RootLayout() {
   const shouldShowShell = Boolean(isHydrated && accessToken && shellRoutes.has(pathname));
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <StatusBar style="light" />
-        <RealtimeBridge />
-        {isHydrated ? (
-          <View style={styles.app}>
-            {shouldShowShell ? <TopNavigation /> : null}
-            <View style={styles.stackWrap}>
-              <Stack screenOptions={{ headerShown: false }} />
-            </View>
-          </View>
-        ) : (
-          <AppBootstrap />
-        )}
-      </I18nProvider>
-    </QueryClientProvider>
+    <RootErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <StatusBar style="light" />
+          <RealtimeBridge />
+          {isHydrated ? (
+            bootError ? (
+              <AppErrorState
+                title="Connection error"
+                message={bootError}
+                actionLabel="Retry"
+                onAction={() => void hydrate()}
+              />
+            ) : (
+              <View style={styles.app}>
+                {shouldShowShell ? <TopNavigation /> : null}
+                <View style={styles.stackWrap}>
+                  <Stack screenOptions={{ headerShown: false }} />
+                </View>
+              </View>
+            )
+          ) : (
+            <AppBootstrap />
+          )}
+        </I18nProvider>
+      </QueryClientProvider>
+    </RootErrorBoundary>
   );
 }
 
