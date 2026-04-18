@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { MediaAttachmentPreview } from "@/components/media-attachment-preview";
 import { postService } from "@/services/posts";
@@ -62,7 +62,7 @@ const ProfileIdentity = ({
       <Text style={styles.name}>{firstName}</Text>
       <Text style={styles.username}>
         @{username}
-        {createdAt ? ` · ${formatRelativeTime(createdAt)}` : ""}
+        {createdAt ? ` \u2022 ${formatRelativeTime(createdAt)}` : ""}
       </Text>
     </View>
   </Pressable>
@@ -250,7 +250,7 @@ const CommentItem = ({
   );
 };
 
-export const PostCard = ({
+export const PostCard = memo(({
   post,
   onLike,
   onComment,
@@ -265,6 +265,7 @@ export const PostCard = ({
   const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editingBody, setEditingBody] = useState(post.body);
+  const commentInputRef = useRef<TextInput>(null);
   const commentList = post.comments ?? [];
 
   const invalidatePostQueries = async () => {
@@ -480,7 +481,7 @@ export const PostCard = ({
           <Ionicons name="thumbs-up-outline" color={colors.textMuted} size={18} />
           <Text style={styles.action}>Like</Text>
         </Pressable>
-        <Pressable style={styles.actionButton} onPress={() => {}}>
+        <Pressable style={styles.actionButton} onPress={() => commentInputRef.current?.focus()}>
           <Ionicons name="chatbubble-outline" color={colors.textMuted} size={18} />
           <Text style={styles.action}>Comment</Text>
         </Pressable>
@@ -502,6 +503,7 @@ export const PostCard = ({
 
       <View style={styles.commentComposer}>
         <TextInput
+          ref={commentInputRef}
           value={commentBody}
           onChangeText={setCommentBody}
           placeholder="Add to the conversation"
@@ -538,7 +540,7 @@ export const PostCard = ({
       ) : null}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

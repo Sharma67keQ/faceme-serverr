@@ -14,7 +14,7 @@ export const Input = ({ label, ...props }: InputProps) => (
   <View style={styles.wrapper}>
     <Text style={styles.label}>{label}</Text>
     <TextInput
-      placeholderTextColor={colors.textMuted}
+      placeholderTextColor={colors.textSoft}
       style={[styles.input, props.multiline ? styles.multiline : null]}
       {...props}
     />
@@ -27,15 +27,13 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    fontSize: 13,
+    fontWeight: "600",
   },
   input: {
-    minHeight: 54,
-    borderRadius: radius.pill,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    minHeight: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
@@ -43,8 +41,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   multiline: {
-    borderRadius: radius.lg,
-    minHeight: 120,
+    minHeight: 110,
     paddingVertical: spacing.md,
     textAlignVertical: "top",
   },

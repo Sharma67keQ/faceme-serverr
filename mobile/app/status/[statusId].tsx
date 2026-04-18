@@ -9,7 +9,7 @@ import { Screen } from "@/components/ui/screen";
 import { statusService } from "@/services/status";
 import { colors, radius, spacing } from "@/utils/theme";
 
-const QUICK_REACTIONS = ["🔥", "👏", "❤️"];
+const QUICK_REACTIONS = ["\u{1F525}", "\u{1F44F}", "\u{2764}\u{FE0F}"];
 
 export default function StatusDetailScreen() {
   const params = useLocalSearchParams<{ statusId: string | string[] }>();
@@ -41,7 +41,7 @@ export default function StatusDetailScreen() {
     if (status && !status.isViewed) {
       viewMutation.mutate();
     }
-  }, [status]);
+  }, [status, viewMutation]);
 
   if (isLoading) {
     return (
@@ -74,7 +74,7 @@ export default function StatusDetailScreen() {
           </Pressable>
           <View style={styles.identityText}>
             <Text style={styles.author}>{status.author.firstName ?? status.author.username}</Text>
-            <Text style={styles.meta}>{status.visibility} · {status.viewersCount ?? 0} viewers</Text>
+            <Text style={styles.meta}>{status.visibility} {"\u2022"} {status.viewersCount ?? 0} viewers</Text>
           </View>
         </View>
         {status.text ? <Text style={styles.body}>{status.text}</Text> : null}

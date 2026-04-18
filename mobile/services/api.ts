@@ -2,6 +2,7 @@ import axios from "axios";
 import { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { authSession } from "@/services/auth-session";
 import { runtimeConfig } from "@/services/runtime-config";
+import { normalizeRequestError } from "@/utils/errors";
 import { tokenStorage } from "@/utils/storage";
 
 export const api = axios.create({
@@ -22,27 +23,20 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    console.error("API request failed", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-      response: error.response?.data,
-    });
     const status = error.response?.status;
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
     if (!originalRequest || status !== 401 || originalRequest._retry) {
-      throw error;
+      throw normalizeRequestError(error);
     }
 
     if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/register")) {
-      throw error;
+      throw normalizeRequestError(error);
     }
 
     if (originalRequest.url?.includes("/auth/refresh")) {
       await authSession.clearSession();
-      throw error;
+      throw normalizeRequestError(error);
     }
 
     originalRequest._retry = true;
@@ -50,10 +44,14 @@ api.interceptors.response.use(
     const nextAccessToken = await authSession.refreshSession();
 
     if (!nextAccessToken) {
-      throw error;
+      throw normalizeRequestError(error);
     }
 
     originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
-    return api(originalRequest);
+    try {
+      return await api(originalRequest);
+    } catch (retryError) {
+      throw normalizeRequestError(retryError);
+    }
   },
 );

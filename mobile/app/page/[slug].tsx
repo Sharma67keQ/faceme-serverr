@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MediaAttachmentPreview } from "@/components/media-attachment-preview";
 import { PostCard } from "@/components/post-card";
+import { ScreenState } from "@/components/screen-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Screen } from "@/components/ui/screen";
@@ -12,7 +13,6 @@ import { postService } from "@/services/posts";
 import { socialService } from "@/services/social";
 import { useAuthStore } from "@/store/auth-store";
 import { colors, radius, spacing } from "@/utils/theme";
-import { useState } from "react";
 
 export default function PageScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -24,12 +24,12 @@ export default function PageScreen() {
   const [pageName, setPageName] = useState("");
   const [pageDescription, setPageDescription] = useState("");
 
-  const { data: page } = useQuery({
+  const { data: page, isLoading, isError, refetch } = useQuery({
     queryKey: ["page", slug],
     queryFn: () => socialService.getPage(slug),
   });
   const isOwner = page?.owner.id === currentUserId;
-  const { data: posts = [] } = useQuery({
+  const { data: posts = [], isLoading: arePostsLoading, isError: arePostsError, refetch: refetchPosts } = useQuery({
     queryKey: ["page-posts", page?.id],
     queryFn: () => postService.getPostsByPage(page!.id),
     enabled: Boolean(page?.id),
@@ -99,74 +99,101 @@ export default function PageScreen() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <ScreenState variant="loading" title="Opening page" message="Page details are loading." />
+      </Screen>
+    );
+  }
+
+  if (isError || !page) {
+    return (
+      <Screen>
+        <ScreenState
+          variant="error"
+          title="Could not open page"
+          message="This page is unavailable right now."
+          actionLabel="Retry"
+          onAction={() => void refetch()}
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen scroll>
-      {page ? (
-        <>
-          <View style={styles.hero}>
-            <Text style={styles.title}>{page.name}</Text>
-            <Text style={styles.meta}>{page.followersCount} followers</Text>
-            <Text style={styles.body}>{page.description ?? "Page updates and posts."}</Text>
-            <Button
-              label={followMutation.isPending ? "Updating..." : page.isFollowing ? "Following" : "Follow page"}
-              onPress={() => followMutation.mutate()}
-              variant={page.isFollowing ? "secondary" : "primary"}
-            />
+      <View style={styles.hero}>
+        <Text style={styles.title}>{page.name}</Text>
+        <Text style={styles.meta}>{page.followersCount} followers</Text>
+        <Text style={styles.body}>{page.description ?? "Page updates and posts."}</Text>
+        <Button
+          label={followMutation.isPending ? "Updating..." : page.isFollowing ? "Following" : "Follow page"}
+          onPress={() => followMutation.mutate()}
+          variant={page.isFollowing ? "secondary" : "primary"}
+        />
+      </View>
+      {isOwner ? (
+        <View style={styles.compose}>
+          <Text style={styles.sectionTitle}>Manage page</Text>
+          <Input label="Page name" value={pageName} onChangeText={setPageName} placeholder={page.name} />
+          <Input
+            label="Description"
+            value={pageDescription}
+            onChangeText={setPageDescription}
+            placeholder={page.description ?? "Describe this page"}
+          />
+          <Button
+            label={updateMutation.isPending ? "Saving..." : "Save page changes"}
+            variant="secondary"
+            onPress={() => updateMutation.mutate()}
+            disabled={updateMutation.isPending}
+          />
+          <Button
+            label={deleteMutation.isPending ? "Deleting..." : "Delete page"}
+            onPress={() => deleteMutation.mutate()}
+            disabled={deleteMutation.isPending}
+          />
+        </View>
+      ) : null}
+      {isOwner ? (
+        <View style={styles.compose}>
+          <Text style={styles.sectionTitle}>Post as page owner</Text>
+          <Input label="Post body" value={body} onChangeText={setBody} multiline />
+          <View style={styles.mediaActions}>
+            <Pressable style={styles.mediaButton} onPress={() => void handlePickAttachment("image")}>
+              <Text style={styles.mediaButtonLabel}>{isUploadingMedia ? "Uploading..." : "Add photo"}</Text>
+            </Pressable>
+            <Pressable style={styles.mediaButton} onPress={() => void handlePickAttachment("video")}>
+              <Text style={styles.mediaButtonLabel}>{isUploadingMedia ? "Uploading..." : "Add video"}</Text>
+            </Pressable>
           </View>
-          {isOwner ? (
-            <View style={styles.compose}>
-              <Text style={styles.sectionTitle}>Manage page</Text>
-              <Input label="Page name" value={pageName} onChangeText={setPageName} placeholder={page.name} />
-              <Input
-                label="Description"
-                value={pageDescription}
-                onChangeText={setPageDescription}
-                placeholder={page.description ?? "Describe this page"}
-              />
-              <Button
-                label={updateMutation.isPending ? "Saving..." : "Save page changes"}
-                variant="secondary"
-                onPress={() => updateMutation.mutate()}
-                disabled={updateMutation.isPending}
-              />
-              <Button
-                label={deleteMutation.isPending ? "Deleting..." : "Delete page"}
-                onPress={() => deleteMutation.mutate()}
-                disabled={deleteMutation.isPending}
-              />
-            </View>
+          {mediaAttachment ? (
+            <MediaAttachmentPreview uri={mediaAttachment.localUri} kind={mediaAttachment.kind} height={220} />
           ) : null}
-          {isOwner ? (
-            <View style={styles.compose}>
-              <Text style={styles.sectionTitle}>Post as page owner</Text>
-              <Input label="Post body" value={body} onChangeText={setBody} multiline />
-              <View style={styles.mediaActions}>
-                <Pressable style={styles.mediaButton} onPress={() => void handlePickAttachment("image")}>
-                  <Text style={styles.mediaButtonLabel}>{isUploadingMedia ? "Uploading..." : "Add photo"}</Text>
-                </Pressable>
-                <Pressable style={styles.mediaButton} onPress={() => void handlePickAttachment("video")}>
-                  <Text style={styles.mediaButtonLabel}>{isUploadingMedia ? "Uploading..." : "Add video"}</Text>
-                </Pressable>
-              </View>
-              {mediaAttachment ? (
-                <MediaAttachmentPreview uri={mediaAttachment.localUri} kind={mediaAttachment.kind} height={220} />
-              ) : null}
-              <Button
-                label={postMutation.isPending ? "Publishing..." : "Publish page post"}
-                onPress={() => postMutation.mutate()}
-                disabled={!body.trim() || postMutation.isPending || isUploadingMedia}
-              />
-            </View>
-          ) : null}
-          <View style={styles.list}>
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
-          </View>
-        </>
-      ) : (
-        <Text style={styles.body}>Loading page...</Text>
-      )}
+          <Button
+            label={postMutation.isPending ? "Publishing..." : "Publish page post"}
+            onPress={() => postMutation.mutate()}
+            disabled={!body.trim() || postMutation.isPending || isUploadingMedia}
+          />
+        </View>
+      ) : null}
+      <View style={styles.list}>
+        {arePostsLoading ? <ScreenState variant="loading" title="Loading posts" message="Fetching the latest page updates." /> : null}
+        {arePostsError ? (
+          <ScreenState
+            variant="error"
+            title="Posts unavailable"
+            message="We could not load this page's posts."
+            actionLabel="Retry"
+            onAction={() => void refetchPosts()}
+          />
+        ) : null}
+        {!arePostsLoading && !arePostsError ? posts.map((post) => <PostCard key={post.id} post={post} />) : null}
+        {!arePostsLoading && !arePostsError && !posts.length ? (
+          <ScreenState variant="empty" title="No posts yet" message="New page posts will appear here." />
+        ) : null}
+      </View>
     </Screen>
   );
 }

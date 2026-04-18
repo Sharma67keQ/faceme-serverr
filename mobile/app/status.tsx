@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { MediaAttachmentPreview } from "@/components/media-attachment-preview";
+import { ScreenState } from "@/components/screen-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +27,11 @@ export default function StatusScreen() {
   const [replyText, setReplyText] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: statuses = [] } = useQuery({
+  const statusQuery = useQuery({
     queryKey: ["status"],
     queryFn: statusService.list,
   });
+  const statuses = statusQuery.data ?? [];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -79,71 +81,87 @@ export default function StatusScreen() {
     }
   };
 
+  if (statusQuery.isLoading) {
+    return (
+      <Screen>
+        <ScreenState variant="loading" title="Loading status" message="Fetching fresh moments and reactions." />
+      </Screen>
+    );
+  }
+
+  if (statusQuery.isError) {
+    return (
+      <Screen>
+        <ScreenState
+          variant="error"
+          title="Status unavailable"
+          message="We could not load status updates right now."
+          actionLabel="Retry"
+          onAction={() => void statusQuery.refetch()}
+        />
+      </Screen>
+    );
+  }
+
   return (
-    <Screen scroll>
-      <View style={styles.hero}>
-        <Text style={styles.title}>{t("status.title")}</Text>
-        <Text style={styles.heroBody}>Share a quick moment that expires naturally and keeps your presence alive.</Text>
-      </View>
-      <View style={styles.composeCard}>
-        <View style={styles.row}>
-          {(["TEXT", "IMAGE", "VIDEO"] as const).map((value) => (
-            <Pressable
-              key={value}
-              style={[styles.chip, kind === value ? styles.chipActive : null]}
-              onPress={() => setKind(value)}
-            >
-              <Text style={[styles.chipLabel, kind === value ? styles.chipLabelActive : null]}>{value}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <View style={styles.row}>
-          {(["PUBLIC", "FOLLOWERS", "FRIENDS"] as const).map((value) => (
-            <Pressable
-              key={value}
-              style={[styles.chip, visibility === value ? styles.chipActive : null]}
-              onPress={() => setVisibility(value)}
-            >
-              <Text style={[styles.chipLabel, visibility === value ? styles.chipLabelActive : null]}>{value}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {kind === "TEXT" ? (
-          <Input label={t("status.textStatus")} value={text} onChangeText={setText} multiline />
-        ) : (
+    <Screen>
+      <FlatList
+        data={statuses}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={(
           <>
-            <View style={styles.row}>
-              <Pressable style={styles.pickerButton} onPress={() => void handlePickMedia(kind)}>
-                <Text style={styles.pickerButtonLabel}>
-                  {isUploading ? `Uploading ${kind.toLowerCase()}...` : kind === "VIDEO" ? "Pick video" : "Pick image"}
-                </Text>
-              </Pressable>
+            <View style={styles.hero}>
+              <Text style={styles.title}>{t("status.title")}</Text>
+              <Text style={styles.heroBody}>Share a quick moment that expires naturally and keeps your presence alive.</Text>
             </View>
-            {mediaAttachment ? (
-              <MediaAttachmentPreview uri={mediaAttachment.localUri} kind={kind} label="Status ready" />
-            ) : null}
+            <View style={styles.composeCard}>
+              <View style={styles.row}>
+                {(["TEXT", "IMAGE", "VIDEO"] as const).map((value) => (
+                  <Pressable key={value} style={[styles.chip, kind === value ? styles.chipActive : null]} onPress={() => setKind(value)}>
+                    <Text style={[styles.chipLabel, kind === value ? styles.chipLabelActive : null]}>{value}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.row}>
+                {(["PUBLIC", "FOLLOWERS", "FRIENDS"] as const).map((value) => (
+                  <Pressable key={value} style={[styles.chip, visibility === value ? styles.chipActive : null]} onPress={() => setVisibility(value)}>
+                    <Text style={[styles.chipLabel, visibility === value ? styles.chipLabelActive : null]}>{value}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              {kind === "TEXT" ? (
+                <Input label={t("status.textStatus")} value={text} onChangeText={setText} multiline />
+              ) : (
+                <>
+                  <View style={styles.row}>
+                    <Pressable style={styles.pickerButton} onPress={() => void handlePickMedia(kind)}>
+                      <Text style={styles.pickerButtonLabel}>
+                        {isUploading ? `Uploading ${kind.toLowerCase()}...` : kind === "VIDEO" ? "Pick video" : "Pick image"}
+                      </Text>
+                    </Pressable>
+                  </View>
+                  {mediaAttachment ? <MediaAttachmentPreview uri={mediaAttachment.localUri} kind={kind} label="Status ready" /> : null}
+                </>
+              )}
+              <Input label={t("status.optionalReply")} value={replyText} onChangeText={setReplyText} placeholder="Add text when reacting to someone's status" />
+              <Button
+                label={createMutation.isPending ? t("status.publishing") : t("status.publish")}
+                onPress={() => createMutation.mutate()}
+                disabled={createMutation.isPending || isUploading || (kind !== "TEXT" && !mediaAttachment?.remoteUrl)}
+              />
+            </View>
           </>
         )}
-        <Input
-          label={t("status.optionalReply")}
-          value={replyText}
-          onChangeText={setReplyText}
-          placeholder="Add text when reacting to someone's status"
-        />
-        <Button
-          label={createMutation.isPending ? t("status.publishing") : t("status.publish")}
-          onPress={() => createMutation.mutate()}
-          disabled={createMutation.isPending || isUploading || (kind !== "TEXT" && !mediaAttachment?.remoteUrl)}
-        />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.list}>
-        {statuses.map((status) => {
+        ListEmptyComponent={<ScreenState variant="empty" title="No status updates yet" message="Publish a quick status to get the stream moving." />}
+        renderItem={({ item: status }) => {
           const reactions = status.reactions ?? [];
           const viewers = status.viewers ?? [];
 
           return (
-            <View key={status.id} style={styles.card}>
+            <View style={styles.card}>
               <View style={styles.identity}>
                 <Pressable onPress={() => router.push(`/status/${status.id}` as never)}>
                   <Avatar name={status.author.firstName ?? status.author.username} />
@@ -160,11 +178,7 @@ export default function StatusScreen() {
               <Text style={styles.body}>{status.text ?? status.mediaUrl ?? "Status update"}</Text>
               <View style={styles.row}>
                 {QUICK_REACTIONS.map((emoji) => (
-                  <Pressable
-                    key={`${status.id}-${emoji}`}
-                    style={styles.reactionChip}
-                    onPress={() => reactMutation.mutate({ statusId: status.id, emoji })}
-                  >
+                  <Pressable key={`${status.id}-${emoji}`} style={styles.reactionChip} onPress={() => reactMutation.mutate({ statusId: status.id, emoji })}>
                     <Text>{emoji}</Text>
                   </Pressable>
                 ))}
@@ -173,11 +187,7 @@ export default function StatusScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Recent reactions</Text>
                   {reactions.slice(0, 4).map((reaction) => (
-                    <Pressable
-                      key={reaction.id}
-                      style={styles.metaCard}
-                      onPress={() => router.push(`/profile/${reaction.user.username}`)}
-                    >
+                    <Pressable key={reaction.id} style={styles.metaCard} onPress={() => router.push(`/profile/${reaction.user.username}`)}>
                       <Text style={styles.metaTitle}>
                         {reaction.emoji} @{reaction.user.username}
                       </Text>
@@ -190,11 +200,7 @@ export default function StatusScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Viewed by</Text>
                   {viewers.slice(0, 5).map((view) => (
-                    <Pressable
-                      key={view.id}
-                      style={styles.metaCard}
-                      onPress={() => router.push(`/profile/${view.viewer.username}`)}
-                    >
+                    <Pressable key={view.id} style={styles.metaCard} onPress={() => router.push(`/profile/${view.viewer.username}`)}>
                       <Text style={styles.metaTitle}>{view.viewer.firstName ?? view.viewer.username}</Text>
                       <Text style={styles.metaBody}>{new Date(view.viewedAt).toLocaleString()}</Text>
                     </Pressable>
@@ -208,8 +214,8 @@ export default function StatusScreen() {
               ) : null}
             </View>
           );
-        })}
-      </ScrollView>
+        }}
+      />
     </Screen>
   );
 }
@@ -252,7 +258,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
   chipLabel: { color: colors.text, fontWeight: "700" },
   chipLabelActive: { color: colors.text },
-  list: { gap: spacing.md, paddingBottom: 80 },
+  list: { flexGrow: 1, gap: spacing.md, paddingBottom: 80, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   card: {
     backgroundColor: "rgba(38, 33, 63, 0.92)",
     borderColor: colors.border,
@@ -286,13 +292,8 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: "700",
   },
-  section: {
-    gap: spacing.xs,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontWeight: "800",
-  },
+  section: { gap: spacing.xs },
+  sectionTitle: { color: colors.text, fontWeight: "800" },
   metaCard: {
     backgroundColor: "rgba(255,255,255,0.07)",
     borderColor: colors.border,
@@ -301,13 +302,8 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: spacing.sm,
   },
-  metaTitle: {
-    color: colors.text,
-    fontWeight: "700",
-  },
-  metaBody: {
-    color: colors.textMuted,
-  },
+  metaTitle: { color: colors.text, fontWeight: "700" },
+  metaBody: { color: colors.textMuted },
   deleteButton: {
     alignItems: "center",
     backgroundColor: "rgba(255, 92, 138, 0.12)",
@@ -316,8 +312,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: spacing.sm,
   },
-  deleteLabel: {
-    color: colors.danger,
-    fontWeight: "800",
-  },
+  deleteLabel: { color: colors.danger, fontWeight: "800" },
 });

@@ -29,7 +29,7 @@ export const GuestGuard = ({ children }: PropsWithChildren) => {
   }
 
   if (accessToken) {
-    return <Redirect href={(user?.isOnboardingComplete ? "/(tabs)" : "/(onboarding)/setup") as never} />;
+    return <Redirect href={(user?.isOnboardingComplete ? "/" : "/setup") as never} />;
   }
 
   return children;

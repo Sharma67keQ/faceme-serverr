@@ -85,7 +85,7 @@ export default function LoginScreen() {
 
     try {
       await signIn({ identifier: identifier.trim().toLowerCase(), password });
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error) {
       if (error instanceof AxiosError) {
         setServerError(getApiErrorMessage(error));

@@ -58,7 +58,7 @@ export default function OnboardingSetupScreen() {
     onSuccess: async (nextUser) => {
       setUser(nextUser);
       await queryClient.invalidateQueries({ queryKey: ["feed"] });
-      router.replace("/(tabs)");
+      router.replace("/");
     },
   });
 

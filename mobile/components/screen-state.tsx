@@ -40,18 +40,14 @@ const styles = StyleSheet.create({
   },
   card: {
     alignItems: "center",
-    backgroundColor: "rgba(38, 33, 63, 0.92)",
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     gap: spacing.sm,
     maxWidth: 420,
     padding: spacing.xl,
     width: "100%",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
   },
   title: {
     color: colors.text,
@@ -67,12 +63,12 @@ const styles = StyleSheet.create({
   button: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
   buttonLabel: {
-    color: colors.text,
+    color: "#FFFFFF",
     fontWeight: "800",
   },
 });

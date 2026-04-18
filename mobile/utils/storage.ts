@@ -1,24 +1,51 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 const ACCESS_TOKEN_KEY = "faceme.accessToken";
 const REFRESH_TOKEN_KEY = "faceme.refreshToken";
 const LANGUAGE_KEY = "faceme.language";
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainService: "faceme.auth",
+};
+
+const migrateLegacyToken = async (key: string) => {
+  const secureValue = await SecureStore.getItemAsync(key, SECURE_STORE_OPTIONS);
+
+  if (secureValue) {
+    return secureValue;
+  }
+
+  const legacyValue = await AsyncStorage.getItem(key);
+
+  if (!legacyValue) {
+    return null;
+  }
+
+  await SecureStore.setItemAsync(key, legacyValue, SECURE_STORE_OPTIONS);
+  await AsyncStorage.removeItem(key);
+  return legacyValue;
+};
 
 export const tokenStorage = {
   async getAccessToken() {
-    return AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+    return migrateLegacyToken(ACCESS_TOKEN_KEY);
   },
   async getRefreshToken() {
-    return AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+    return migrateLegacyToken(REFRESH_TOKEN_KEY);
   },
   async setTokens(accessToken: string, refreshToken: string) {
-    await AsyncStorage.multiSet([
-      [ACCESS_TOKEN_KEY, accessToken],
-      [REFRESH_TOKEN_KEY, refreshToken],
+    await Promise.all([
+      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken, SECURE_STORE_OPTIONS),
+      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken, SECURE_STORE_OPTIONS),
+      AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]),
     ]);
   },
   async clear() {
-    await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]);
+    await Promise.all([
+      SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS),
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS),
+      AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]),
+    ]);
   },
 };
 

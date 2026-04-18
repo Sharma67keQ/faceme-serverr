@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Avatar } from "@/components/ui/avatar";
 import { Conversation } from "@/types/domain";
-import { Avatar } from "./ui/avatar";
 import { colors, radius, spacing } from "@/utils/theme";
 
 type ChatListItemProps = {
@@ -35,17 +36,17 @@ const formatTimestamp = (value?: string | null) => {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
 };
 
-export const ChatListItem = ({ conversation, currentUserId, onPress }: ChatListItemProps) => {
+export const ChatListItem = memo(({ conversation, currentUserId, onPress }: ChatListItemProps) => {
   const peer =
     conversation.participants.find((participant) => participant.user.id !== currentUserId)?.user ??
     conversation.participants[0]?.user;
   const title =
     conversation.type === "DIRECT"
       ? peer?.firstName ?? peer?.username ?? "Conversation"
-      : conversation.title ?? `${conversation.type === "COMMUNITY" ? "Community" : "Group"} room`;
+      : conversation.title ?? `${conversation.type === "COMMUNITY" ? "Community" : "Group"} chat`;
   const preview =
     conversation.lastMessage?.text ??
-    (conversation.type === "DIRECT" ? "Start the conversation" : "Open the room conversation");
+    (conversation.type === "DIRECT" ? "Start the conversation" : "Open the group conversation");
   const isOnline = peer?.presenceStatus === "ONLINE";
 
   return (
@@ -56,33 +57,29 @@ export const ChatListItem = ({ conversation, currentUserId, onPress }: ChatListI
       </View>
       <View style={styles.content}>
         <View style={styles.topRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {title}
-          </Text>
+          <Text style={styles.name} numberOfLines={1}>{title}</Text>
           <Text style={styles.time}>{formatTimestamp(conversation.lastMessageAt ?? conversation.updatedAt)}</Text>
         </View>
         <View style={styles.bottomRow}>
-          <Text style={styles.preview} numberOfLines={1}>
-            {preview}
-          </Text>
+          <Text style={styles.preview} numberOfLines={1}>{preview}</Text>
           {conversation.unreadCount ? (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadLabel}>{conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}</Text>
             </View>
           ) : null}
         </View>
-        <Text style={styles.meta}>{isOnline ? "Online now" : "Offline"} · {conversation.type.toLowerCase()}</Text>
+        <Text style={styles.meta}>{isOnline ? "Online now" : "Offline"} {"\u2022"} {conversation.type.toLowerCase()}</Text>
       </View>
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {
     alignItems: "center",
-    backgroundColor: "rgba(38, 33, 63, 0.92)",
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
@@ -92,7 +89,7 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   presenceDot: {
-    borderColor: colors.surfaceRaised,
+    borderColor: colors.surface,
     borderRadius: radius.pill,
     borderWidth: 2,
     bottom: 0,
@@ -139,7 +136,7 @@ const styles = StyleSheet.create({
   },
   unreadBadge: {
     alignItems: "center",
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     borderRadius: radius.pill,
     justifyContent: "center",
     minWidth: 26,
@@ -147,7 +144,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   unreadLabel: {
-    color: colors.surfaceRaised,
+    color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "800",
   },

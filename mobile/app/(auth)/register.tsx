@@ -158,14 +158,8 @@ export default function RegisterScreen() {
         email: email.trim().toLowerCase(),
         password,
       });
-      router.replace("/(tabs)");
+      router.replace("/");
     } catch (error) {
-      console.error("Faceme signup failed", {
-        error,
-        status: error instanceof AxiosError ? error.response?.status : undefined,
-        payload: error instanceof AxiosError ? error.response?.data : undefined,
-      });
-
       if (error instanceof AxiosError) {
         setServerError(getApiErrorMessage(error));
       } else {

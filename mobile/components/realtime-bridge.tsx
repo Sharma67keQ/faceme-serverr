@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { chatService } from "@/services/chat";
 import { useAuthStore } from "@/store/auth-store";
+import { logger } from "@/utils/logger";
 
 export const RealtimeBridge = () => {
   const queryClient = useQueryClient();
@@ -15,7 +16,7 @@ export const RealtimeBridge = () => {
 
     const socket = chatService.connect(accessToken);
     if (!socket) {
-      console.error("Realtime bridge could not initialize socket");
+      logger.error("Realtime bridge could not initialize socket");
       return;
     }
 

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ScreenState } from "@/components/screen-state";
 import { Avatar } from "@/components/ui/avatar";
 import { Screen } from "@/components/ui/screen";
 import { userService } from "@/services/users";
@@ -16,20 +17,35 @@ export default function ConnectionsScreen() {
 
   return (
     <Screen>
-      <View style={styles.hero}>
-        <Text style={styles.title}>{isFollowers ? "Followers" : "Following"}</Text>
-        <Text style={styles.subtitle}>People connected to @{username}</Text>
-      </View>
-      {isLoading ? <Text style={styles.feedback}>Loading people...</Text> : null}
-      {isError ? (
-        <Text style={styles.feedback} onPress={() => void refetch()}>
-          Could not load the list. Tap to retry.
-        </Text>
-      ) : null}
-      <ScrollView contentContainerStyle={styles.list}>
-        {data.map((item) => (
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={(
+          <View style={styles.hero}>
+            <Text style={styles.title}>{isFollowers ? "Followers" : "Following"}</Text>
+            <Text style={styles.subtitle}>People connected to @{username}</Text>
+          </View>
+        )}
+        ListEmptyComponent={
+          isLoading ? (
+            <ScreenState variant="loading" title="Loading people" message="Fetching this connection list." />
+          ) : isError ? (
+            <ScreenState
+              variant="error"
+              title="Connections unavailable"
+              message="We could not load this list right now."
+              actionLabel="Retry"
+              onAction={() => void refetch()}
+            />
+          ) : (
+            <ScreenState variant="empty" title="No users here yet" message="This connection list is empty right now." />
+          )
+        }
+        renderItem={({ item }) => (
           <Pressable
-            key={item.id}
             style={styles.card}
             onPress={() => router.push(`/profile/${item.username}`)}
           >
@@ -41,11 +57,8 @@ export default function ConnectionsScreen() {
             </View>
             <Text style={styles.viewProfile}>View Profile</Text>
           </Pressable>
-        ))}
-        {!isLoading && !isError && !data.length ? (
-          <Text style={styles.feedback}>No users here yet.</Text>
-        ) : null}
-      </ScrollView>
+        )}
+      />
     </Screen>
   );
 }
@@ -72,8 +85,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   list: {
+    flexGrow: 1,
     gap: spacing.sm,
     paddingBottom: 140,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   card: {
     alignItems: "center",
@@ -103,8 +119,5 @@ const styles = StyleSheet.create({
   viewProfile: {
     color: colors.primaryDark,
     fontWeight: "700",
-  },
-  feedback: {
-    color: colors.textMuted,
   },
 });

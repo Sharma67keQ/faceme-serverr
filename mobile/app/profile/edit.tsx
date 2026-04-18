@@ -26,9 +26,7 @@ export default function EditProfileScreen() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [accountType, setAccountType] = useState(currentUser?.accountType ?? "PERSONAL");
-  const [profileVisibility, setProfileVisibility] = useState<
-    "PUBLIC" | "FOLLOWERS" | "FRIENDS"
-  >(currentUser?.profileVisibility ?? "PUBLIC");
+  const [profileVisibility, setProfileVisibility] = useState<"PUBLIC" | "FOLLOWERS" | "FRIENDS">(currentUser?.profileVisibility ?? "PUBLIC");
 
   const handleSave = async () => {
     const { data } = await api.patch<User>("/users/me", {
@@ -117,14 +115,7 @@ export default function EditProfileScreen() {
                 style={[styles.accountPill, profileVisibility === value ? styles.accountPillActive : null]}
                 onPress={() => setProfileVisibility(value)}
               >
-                <Text
-                  style={[
-                    styles.accountPillLabel,
-                    profileVisibility === value ? styles.accountPillLabelActive : null,
-                  ]}
-                >
-                  {value}
-                </Text>
+                <Text style={[styles.accountPillLabel, profileVisibility === value ? styles.accountPillLabelActive : null]}>{value}</Text>
               </Pressable>
             ))}
           </View>
@@ -138,9 +129,7 @@ export default function EditProfileScreen() {
                 style={[styles.accountPill, accountType === value ? styles.accountPillActive : null]}
                 onPress={() => setAccountType(value)}
               >
-                <Text style={[styles.accountPillLabel, accountType === value ? styles.accountPillLabelActive : null]}>
-                  {value}
-                </Text>
+                <Text style={[styles.accountPillLabel, accountType === value ? styles.accountPillLabelActive : null]}>{value}</Text>
               </Pressable>
             ))}
           </View>

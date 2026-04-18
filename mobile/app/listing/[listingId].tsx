@@ -64,8 +64,8 @@ export default function ListingDetailScreen() {
         <Text style={styles.title}>{listing.title}</Text>
         <Text style={styles.meta}>
           {listing.category}
-          {listing.conditionLabel ? ` · ${listing.conditionLabel}` : ""}
-          {listing.city ? ` · ${listing.city}` : ""}
+          {listing.conditionLabel ? ` \u2022 ${listing.conditionLabel}` : ""}
+          {listing.city ? ` \u2022 ${listing.city}` : ""}
           {listing.countryName ? `, ${listing.countryName}` : ""}
         </Text>
       </View>
@@ -97,10 +97,7 @@ export default function ListingDetailScreen() {
           variant="secondary"
           onPress={() => saveMutation.mutate()}
         />
-        <Button
-          label={contactMutation.isPending ? "Opening..." : "Message seller"}
-          onPress={() => contactMutation.mutate()}
-        />
+        <Button label={contactMutation.isPending ? "Opening..." : "Message seller"} onPress={() => contactMutation.mutate()} />
       </View>
     </Screen>
   );

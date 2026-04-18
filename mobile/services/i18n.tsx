@@ -4,6 +4,7 @@ import en from "@/locales/en.json";
 import so from "@/locales/so.json";
 import { useAuthStore } from "@/store/auth-store";
 import { User } from "@/types/domain";
+import { logger } from "@/utils/logger";
 import { preferenceStorage } from "@/utils/storage";
 import { userService } from "./users";
 
@@ -58,7 +59,7 @@ export const I18nProvider = ({ children }: PropsWithChildren) => {
         const nextLanguage = (user?.preferredLanguage ?? cachedLanguage ?? fallbackLanguage) as AppLanguage;
         setLanguageState(nextLanguage);
       } catch (error) {
-        console.error("Failed to hydrate language preference", error);
+        logger.error("Failed to hydrate language preference", error);
       }
     };
 
@@ -78,7 +79,7 @@ export const I18nProvider = ({ children }: PropsWithChildren) => {
         } as User);
       }
     } catch (error) {
-      console.error("Failed to persist language preference", error);
+      logger.error("Failed to persist language preference", error);
     }
   };
 

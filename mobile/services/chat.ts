@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { ChatListResponse, MessageListResponse } from "@/types/api";
+import { logger } from "@/utils/logger";
 import { api } from "./api";
 import { runtimeConfig } from "./runtime-config";
 
@@ -7,24 +8,14 @@ let socket: Socket | null = null;
 
 export const chatService = {
   async getConversations() {
-    try {
-      const { data } = await api.get<ChatListResponse>("/chat/conversations");
-      return data;
-    } catch (error) {
-      console.error("Failed to load conversations", error);
-      throw error;
-    }
+    const { data } = await api.get<ChatListResponse>("/chat/conversations");
+    return data;
   },
   async getMessages(conversationId: string) {
-    try {
-      const { data } = await api.get<MessageListResponse>(
-        `/chat/conversations/${conversationId}/messages`,
-      );
-      return data;
-    } catch (error) {
-      console.error("Failed to load messages", { conversationId, error });
-      throw error;
-    }
+    const { data } = await api.get<MessageListResponse>(
+      `/chat/conversations/${conversationId}/messages`,
+    );
+    return data;
   },
   async createDirectConversation(peerId: string) {
     const { data } = await api.post("/chat/conversations/direct", { peerId });
@@ -58,14 +49,14 @@ export const chatService = {
       });
 
       socket.on("connect_error", (error) => {
-        console.error("Socket connection error", error);
+        logger.error("Socket connection error", error);
       });
 
       socket.on("disconnect", (reason) => {
-        console.error("Socket disconnected", reason);
+        logger.warn("Socket disconnected", reason);
       });
     } catch (error) {
-      console.error("Failed to initialize socket", error);
+      logger.error("Failed to initialize socket", error);
       socket = null;
     }
 

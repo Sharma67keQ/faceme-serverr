@@ -1,5 +1,7 @@
+import { logger } from "@/utils/logger";
+
 const warnInvalidConfig = (label: string, value: string) => {
-  console.warn(`[runtime-config] Invalid ${label}: "${value}". Falling back to a safe default.`);
+  logger.warn(`[runtime-config] Invalid ${label}: "${value}". Falling back to a safe default.`);
 };
 
 const toOrigin = (value: string, fallbackOrigin: string) => {

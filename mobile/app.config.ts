@@ -16,6 +16,7 @@ const plugins: ExpoConfig["plugins"] = [
   "expo-router",
   "expo-asset",
   "expo-font",
+  "expo-secure-store",
   "expo-video",
   [
     "expo-image-picker",

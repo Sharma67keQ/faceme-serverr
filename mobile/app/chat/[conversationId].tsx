@@ -1,14 +1,17 @@
-import { useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { ScreenState } from "@/components/screen-state";
+import { Socket } from "socket.io-client";
 import { NeonLogo } from "@/components/brand/neon-logo";
+import { ScreenState } from "@/components/screen-state";
 import { Screen } from "@/components/ui/screen";
 import { chatService } from "@/services/chat";
 import { useAuthStore } from "@/store/auth-store";
 import { useChatStore } from "@/store/chat-store";
+import { getErrorMessage } from "@/utils/errors";
+import { logger } from "@/utils/logger";
 import { colors, gradients, radius, spacing } from "@/utils/theme";
 
 const formatBubbleTime = (value: string) =>
@@ -29,13 +32,15 @@ export default function ConversationScreen() {
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [messageStatuses, setMessageStatuses] = useState<Record<string, "SENT" | "DELIVERED" | "SEEN">>({});
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, error, isLoading, isError, refetch } = useQuery({
     queryKey: ["messages", resolvedConversationId],
     queryFn: () => chatService.getMessages(resolvedConversationId),
     enabled: Boolean(resolvedConversationId),
-    refetchInterval: 4000,
+    refetchInterval: accessToken && socketConnected ? false : 5000,
   });
 
   useEffect(() => {
@@ -54,17 +59,25 @@ export default function ConversationScreen() {
     if (resolvedConversationId && data) {
       setMessages(resolvedConversationId, data);
     }
-  }, [resolvedConversationId, data, setMessages]);
+  }, [data, resolvedConversationId, setMessages]);
 
   useEffect(() => {
     if (!accessToken || !resolvedConversationId) {
+      setSocketConnected(false);
+      socketRef.current = null;
       return;
     }
 
     const socket = chatService.connect(accessToken);
+
     if (!socket) {
+      setSocketConnected(false);
+      socketRef.current = null;
       return;
     }
+
+    socketRef.current = socket;
+    setSocketConnected(socket.connected);
 
     const handleNewMessage = (message: any) => {
       if (message.conversationId === resolvedConversationId) {
@@ -96,18 +109,39 @@ export default function ConversationScreen() {
       }));
     };
 
+    const handleConnect = () => {
+      setSocketConnected(true);
+      socket.emit("conversation:join", resolvedConversationId);
+      void refetch();
+    };
+
+    const handleDisconnect = () => {
+      setSocketConnected(false);
+    };
+
+    const handleConnectError = () => {
+      setSocketConnected(false);
+    };
+
     socket.emit("conversation:join", resolvedConversationId);
     socket.on("message:new", handleNewMessage);
     socket.on("typing:update", handleTypingUpdate);
     socket.on("message:status", handleMessageStatus);
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
       socket.off("message:new", handleNewMessage);
       socket.off("typing:update", handleTypingUpdate);
       socket.off("message:status", handleMessageStatus);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
       socket.emit("typing:stop", { conversationId: resolvedConversationId });
+      setSocketConnected(false);
     };
-  }, [accessToken, appendMessage, currentUserId, resolvedConversationId]);
+  }, [accessToken, appendMessage, currentUserId, refetch, resolvedConversationId]);
 
   const messages = useChatStore((state) => state.messagesByConversation[resolvedConversationId] ?? []);
 
@@ -116,7 +150,8 @@ export default function ConversationScreen() {
       return;
     }
 
-    const socket = chatService.connect(accessToken);
+    const socket = socketRef.current ?? chatService.connect(accessToken);
+
     if (!socket) {
       return;
     }
@@ -150,7 +185,8 @@ export default function ConversationScreen() {
       return;
     }
 
-    const socket = chatService.connect(accessToken);
+    const socket = socketRef.current ?? chatService.connect(accessToken);
+
     if (!socket) {
       return;
     }
@@ -190,7 +226,7 @@ export default function ConversationScreen() {
       setComposerError(null);
 
       if (accessToken) {
-        const socket = chatService.connect(accessToken);
+        const socket = socketRef.current ?? chatService.connect(accessToken);
 
         if (!socket) {
           throw new Error("Socket connection unavailable.");
@@ -208,8 +244,8 @@ export default function ConversationScreen() {
 
       setText("");
     } catch (error) {
-      console.error("Failed to send message", error);
-      setComposerError("Message could not be sent. Try again.");
+      logger.error("Failed to send message", error);
+      setComposerError(getErrorMessage(error, "Message could not be sent. Try again."));
     }
   };
 
@@ -235,7 +271,7 @@ export default function ConversationScreen() {
         <ScreenState
           variant="error"
           title="Could not load messages"
-          message="This chat is temporarily unavailable."
+          message={getErrorMessage(error, "This chat is temporarily unavailable.")}
           actionLabel="Retry"
           onAction={() => void refetch()}
         />
@@ -254,7 +290,7 @@ export default function ConversationScreen() {
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {!messages.length ? <Text style={styles.feedback}>No messages yet. Say hello first.</Text> : null}
+        {!messages.length ? <ScreenState variant="empty" title="No messages yet" message="Say hello first." /> : null}
         {messages.map((message) => {
           const isMine = message.senderId === currentUserId;
 
@@ -266,7 +302,7 @@ export default function ConversationScreen() {
               </View>
               <Text style={styles.metaText}>
                 {formatBubbleTime(message.createdAt)}
-                {isMine ? ` · ${messageStatuses[message.id] ?? "SENT"}` : ""}
+                {isMine ? ` \u2022 ${messageStatuses[message.id] ?? "SENT"}` : ""}
               </Text>
             </View>
           );
@@ -363,9 +399,6 @@ const styles = StyleSheet.create({
   typing: {
     color: colors.textMuted,
     fontStyle: "italic",
-  },
-  feedback: {
-    color: colors.textMuted,
   },
   composer: {
     alignItems: "center",

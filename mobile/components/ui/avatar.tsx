@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors } from "@/utils/theme";
 
@@ -6,13 +7,13 @@ type AvatarProps = {
   size?: number;
 };
 
-export const Avatar = ({ name, size = 44 }: AvatarProps) => (
+export const Avatar = memo(({ name, size = 44 }: AvatarProps) => (
   <View style={[styles.halo, { width: size + 6, height: size + 6, borderRadius: (size + 6) / 2 }]}>
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
       <Text style={[styles.initial, { fontSize: Math.max(14, size * 0.38) }]}>{name.slice(0, 1).toUpperCase()}</Text>
     </View>
   </View>
-);
+));
 
 const styles = StyleSheet.create({
   halo: {

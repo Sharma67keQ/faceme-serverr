@@ -39,7 +39,13 @@ export const MediaAttachmentPreview = memo(
     return (
       <View style={[styles.frame, { minHeight: height }]}>
         {kind === "IMAGE" ? (
-          <Image source={uri} contentFit="cover" style={StyleSheet.absoluteFillObject} />
+          <Image
+            source={uri}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={120}
+            style={StyleSheet.absoluteFillObject}
+          />
         ) : (
           <ManagedVideoView
             allowsFullscreen={false}

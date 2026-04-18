@@ -1,61 +1,44 @@
-import { Redirect, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { PostCard } from "@/components/post-card";
+import { ScreenState } from "@/components/screen-state";
 import { Screen } from "@/components/ui/screen";
 import { postService } from "@/services/posts";
-import { useAuthStore } from "@/store/auth-store";
-import { colors, radius, spacing } from "@/utils/theme";
 
-export default function SharedPostScreen() {
-  const { shareSlug } = useLocalSearchParams<{ shareSlug: string }>();
-  const accessToken = useAuthStore((state) => state.accessToken);
-
-  const { data, isLoading } = useQuery({
+export default function PostDetailScreen() {
+  const params = useLocalSearchParams<{ shareSlug: string | string[] }>();
+  const shareSlug = Array.isArray(params.shareSlug) ? params.shareSlug[0] : params.shareSlug;
+  const { data: post, isLoading, isError, refetch } = useQuery({
     queryKey: ["shared-post", shareSlug],
-    queryFn: () => postService.getSharedPost(shareSlug),
-    enabled: Boolean(accessToken && shareSlug),
+    queryFn: () => (shareSlug ? postService.getSharedPost(shareSlug) : Promise.resolve(null)),
+    enabled: Boolean(shareSlug),
   });
 
-  if (!accessToken) {
-    return <Redirect href="/(auth)/register" />;
+  if (isLoading) {
+    return (
+      <Screen>
+        <ScreenState variant="loading" title="Opening post" message="Loading this conversation." />
+      </Screen>
+    );
+  }
+
+  if (isError || !post) {
+    return (
+      <Screen>
+        <ScreenState
+          variant="error"
+          title="Could not open post"
+          message="This post is unavailable or the link is invalid."
+          actionLabel="Retry"
+          onAction={() => void refetch()}
+        />
+      </Screen>
+    );
   }
 
   return (
-    <Screen>
-      <View style={styles.hero}>
-        <Text style={styles.title}>Shared post</Text>
-        <Text style={styles.subtitle}>Opening a Faceme post shared from the network.</Text>
-      </View>
-      {isLoading ? <Text style={styles.feedback}>Loading post...</Text> : null}
-      {data ? <PostCard post={data} /> : null}
+    <Screen scroll>
+      <PostCard post={post} />
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  hero: {
-    backgroundColor: "rgba(38, 33, 63, 0.94)",
-    borderColor: colors.border,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  subtitle: {
-    color: colors.textMuted,
-    lineHeight: 21,
-  },
-  feedback: {
-    color: colors.textMuted,
-  },
-});
