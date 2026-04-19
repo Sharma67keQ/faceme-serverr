@@ -3,6 +3,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { ListCard } from "@/components/ui/list-card";
 import { Screen } from "@/components/ui/screen";
 import { SectionHeader } from "@/components/ui/section-header";
+import { buildInfo } from "@/utils/build-info";
 
 const settingsRows: Array<{ title: string; subtitle: string; href?: Href; logout?: boolean }> = [
   { title: "Edit profile", subtitle: "Update your public details", href: "/profile/edit" as Href },
@@ -38,6 +39,7 @@ export default function SettingsScreen() {
           })()}
         />
       ))}
+      <ListCard title="App build" subtitle={`${buildInfo.label} - ${buildInfo.releaseMarker}`} />
     </Screen>
   );
 }

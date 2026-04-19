@@ -2,7 +2,7 @@ import { ErrorBoundaryProps, Stack, usePathname } from "expo-router";
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppBootstrap } from "@/components/app-bootstrap";
 import { AppErrorState } from "@/components/app-error-state";
 import { RealtimeBridge } from "@/components/realtime-bridge";
@@ -47,6 +47,7 @@ export default function RootLayout() {
   const hydrate = useAuthStore((state) => state.hydrate);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const bootError = useAuthStore((state) => state.bootError);
   const pathname = usePathname();
 
@@ -82,7 +83,7 @@ export default function RootLayout() {
           <StatusBar style="light" />
           <RealtimeBridge />
           {isHydrated ? (
-            bootError ? (
+            bootError && !user ? (
               <AppErrorState
                 title="Connection error"
                 message={bootError}
@@ -91,6 +92,7 @@ export default function RootLayout() {
               />
             ) : (
               <View style={styles.app}>
+                {bootError ? <ConnectionBanner message={bootError} onRetry={() => void hydrate()} /> : null}
                 {shouldShowShell ? <TopNavigation /> : null}
                 <View style={styles.stackWrap}>
                   <Stack screenOptions={{ headerShown: false }} />
@@ -106,6 +108,17 @@ export default function RootLayout() {
   );
 }
 
+const ConnectionBanner = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
+  <View style={styles.connectionBanner}>
+    <Text style={styles.connectionText} numberOfLines={2}>
+      {message}
+    </Text>
+    <Pressable style={styles.connectionButton} onPress={onRetry}>
+      <Text style={styles.connectionButtonText}>Retry</Text>
+    </Pressable>
+  </View>
+);
+
 const styles = StyleSheet.create({
   app: {
     flex: 1,
@@ -113,5 +126,30 @@ const styles = StyleSheet.create({
   },
   stackWrap: {
     flex: 1,
+  },
+  connectionBanner: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  connectionText: {
+    color: colors.textMuted,
+    flex: 1,
+    lineHeight: 18,
+  },
+  connectionButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  connectionButtonText: {
+    color: colors.text,
+    fontWeight: "800",
   },
 });

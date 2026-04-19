@@ -5,9 +5,10 @@ const appSlug = process.env.APP_SLUG ?? "faceme-wqk2zo";
 const appOwner = process.env.EXPO_OWNER ?? "xd-tech";
 const iosBundleIdentifier = process.env.IOS_BUNDLE_ID ?? "com.xdtech.faceme";
 const androidPackage = process.env.ANDROID_PACKAGE_ID ?? "com.xdtech.faceme";
-const androidVersionCode = Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "4", 10);
+const appVersion = "0.1.1";
+const defaultAndroidVersionCode = 5;
+const androidVersionCode = Number.parseInt(process.env.ANDROID_VERSION_CODE ?? String(defaultAndroidVersionCode), 10);
 const easProjectId = process.env.EAS_PROJECT_ID ?? "7f86ffc9-354f-484b-90ff-14bf288323c9";
-const appVersion = "0.1.0";
 const buildProfile = process.env.EAS_BUILD_PROFILE ?? "";
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
 const enableDevClient = buildProfile === "development" || appEnv === "development";
@@ -62,7 +63,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: androidPackage,
-    versionCode: Number.isFinite(androidVersionCode) ? androidVersionCode : 4,
+    versionCode: Number.isFinite(androidVersionCode) ? androidVersionCode : defaultAndroidVersionCode,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#0B0B12",

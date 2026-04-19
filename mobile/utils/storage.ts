@@ -1,9 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
+import { User } from "@/types/domain";
 
 const ACCESS_TOKEN_KEY = "faceme.accessToken";
 const REFRESH_TOKEN_KEY = "faceme.refreshToken";
 const LANGUAGE_KEY = "faceme.language";
+const USER_SNAPSHOT_KEY = "faceme.userSnapshot";
 const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainService: "faceme.auth",
 };
@@ -44,8 +46,28 @@ export const tokenStorage = {
     await Promise.all([
       SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY, SECURE_STORE_OPTIONS),
       SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY, SECURE_STORE_OPTIONS),
-      AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY]),
+      AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_SNAPSHOT_KEY]),
     ]);
+  },
+};
+
+export const userSnapshotStorage = {
+  async getUser() {
+    const rawUser = await AsyncStorage.getItem(USER_SNAPSHOT_KEY);
+
+    if (!rawUser) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(rawUser) as User;
+    } catch {
+      await AsyncStorage.removeItem(USER_SNAPSHOT_KEY);
+      return null;
+    }
+  },
+  async setUser(user: User) {
+    await AsyncStorage.setItem(USER_SNAPSHOT_KEY, JSON.stringify(user));
   },
 };
 

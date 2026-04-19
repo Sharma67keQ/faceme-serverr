@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { authService } from "@/services/auth";
 import { registerAuthSessionHandlers } from "@/services/auth-session";
 import { chatService } from "@/services/chat";
-import { tokenStorage } from "@/utils/storage";
+import { tokenStorage, userSnapshotStorage } from "@/utils/storage";
 import { User } from "@/types/domain";
 import { getErrorMessage, isConnectionError } from "@/utils/errors";
 import { logger } from "@/utils/logger";
@@ -38,9 +38,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   isRefreshing: false,
   bootError: null,
   setUser(user) {
+    void userSnapshotStorage.setUser(user);
     set({ user });
   },
   setSession({ user, accessToken }) {
+    void userSnapshotStorage.setUser(user);
     set({ user, accessToken, isHydrated: true, bootError: null });
   },
   clearBootError() {
@@ -48,12 +50,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   async signIn(payload) {
     const result = await authService.login(payload);
-    await tokenStorage.setTokens(result.accessToken, result.refreshToken);
+    await Promise.all([
+      tokenStorage.setTokens(result.accessToken, result.refreshToken),
+      userSnapshotStorage.setUser(result.user),
+    ]);
     set({ user: result.user, accessToken: result.accessToken, isHydrated: true, bootError: null });
   },
   async signUp(payload) {
     const result = await authService.register(payload);
-    await tokenStorage.setTokens(result.accessToken, result.refreshToken);
+    await Promise.all([
+      tokenStorage.setTokens(result.accessToken, result.refreshToken),
+      userSnapshotStorage.setUser(result.user),
+    ]);
     set({ user: result.user, accessToken: result.accessToken, isHydrated: true, bootError: null });
   },
   async hydrate() {
@@ -69,12 +77,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       try {
         const user = await authService.fetchMe();
+        await userSnapshotStorage.setUser(user);
         set({ user, accessToken, isHydrated: true, bootError: null });
       } catch (error) {
         if (isConnectionError(error)) {
           const message = getErrorMessage(error, "Connection error. Check your network and try again.");
+          const cachedUser = await userSnapshotStorage.getUser();
           logger.error("Auth hydration failed due to connection error", message);
-          set({ accessToken, isHydrated: true, bootError: message });
+          set({ user: cachedUser, accessToken, isHydrated: true, bootError: message });
           return;
         }
 
@@ -88,12 +98,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         try {
           const user = await authService.fetchMe();
+          await userSnapshotStorage.setUser(user);
           set({ user, accessToken: nextAccessToken, isHydrated: true, bootError: null });
         } catch (retryError) {
           if (isConnectionError(retryError)) {
             const message = getErrorMessage(retryError, "Connection error. Check your network and try again.");
+            const cachedUser = await userSnapshotStorage.getUser();
             logger.error("Auth hydration retry failed due to connection error", message);
-            set({ accessToken: nextAccessToken, isHydrated: true, bootError: message });
+            set({ user: cachedUser, accessToken: nextAccessToken, isHydrated: true, bootError: message });
             return;
           }
 
