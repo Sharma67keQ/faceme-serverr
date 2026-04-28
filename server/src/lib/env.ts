@@ -13,7 +13,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_ENV: z.enum(["development", "production"]).default("development"),
   PORT: z.coerce.number().default(4000),
-  CLIENT_ORIGINS: z.string().min(1).default("http://localhost:8081"),
+  CLIENT_ORIGINS: z.string().min(1).default("https://app.faceme.app"),
   DATABASE_URL: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),

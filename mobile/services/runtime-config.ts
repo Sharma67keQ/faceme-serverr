@@ -16,8 +16,8 @@ const toOrigin = (value: string, fallbackOrigin: string) => {
 
 const productionApiBase = "https://faceme-serverr.onrender.com/api";
 const productionSocketBase = "https://faceme-serverr.onrender.com";
-const developmentApiBase = "http://localhost:4000/api";
-const developmentSocketBase = "http://localhost:4000";
+const developmentApiBase = "https://faceme-serverr.onrender.com/api";
+const developmentSocketBase = "https://faceme-serverr.onrender.com";
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
 const isProductionLike = appEnv !== "development";
 

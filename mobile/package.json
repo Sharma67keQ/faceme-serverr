@@ -20,7 +20,6 @@
     "expo": "~52.0.30",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.5",
-    "expo-dev-client": "~5.0.20",
     "expo-font": "~13.0.4",
     "expo-image": "~2.0.6",
     "expo-image-picker": "~16.0.6",

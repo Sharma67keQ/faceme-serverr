@@ -15,7 +15,7 @@ test("auth register, login, refresh, and logout flow works", async () => {
   const loginResponse = await api
     .post("/api/auth/login")
     .send({
-      email: registered.credentials.email,
+      identifier: registered.credentials.email,
       password: registered.credentials.password,
     })
     .expect(200);

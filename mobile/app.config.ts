@@ -9,9 +9,7 @@ const appVersion = "0.1.1";
 const defaultAndroidVersionCode = 5;
 const androidVersionCode = Number.parseInt(process.env.ANDROID_VERSION_CODE ?? String(defaultAndroidVersionCode), 10);
 const easProjectId = process.env.EAS_PROJECT_ID ?? "7f86ffc9-354f-484b-90ff-14bf288323c9";
-const buildProfile = process.env.EAS_BUILD_PROFILE ?? "";
 const appEnv = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
-const enableDevClient = buildProfile === "development" || appEnv === "development";
 
 const plugins: ExpoConfig["plugins"] = [
   "expo-router",
@@ -27,10 +25,6 @@ const plugins: ExpoConfig["plugins"] = [
   ],
 ];
 
-if (enableDevClient) {
-  plugins.push("expo-dev-client");
-}
-
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: appName,
@@ -42,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   userInterfaceStyle: "dark",
   icon: "./assets/icon.png",
-  newArchEnabled: true,
+  newArchEnabled: false,
   runtimeVersion: appVersion,
   updates: {
     fallbackToCacheTimeout: 0,

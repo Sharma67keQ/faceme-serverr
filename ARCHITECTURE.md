@@ -1,245 +1,380 @@
-# Faceme Hybrid Social Platform
+# Faceme Architecture
 
-## Core architecture
+## Overview
 
-Faceme is implemented as a React Native Expo client backed by an Express API, Prisma ORM, PostgreSQL persistence, Socket.IO realtime messaging, and JWT-based authentication. The product is structured as one hybrid social platform with multiple content modes on the same graph:
+Faceme is a monorepo that contains:
 
-- relationship-driven social posts
-- visual feed and discovery
-- fast conversational quick posts
-- short-form reels
-- 24-hour status updates
-- live voice rooms
+- a mobile client in `mobile/`
+- an API and realtime backend in `server/`
 
-The app keeps a single user identity, a single messaging layer, and a single notification system across friends, follows, pages, groups, and chats.
+The system is designed as a client-server social platform where one user identity is shared across content, relationships, messaging, notifications, moderation, and commerce features.
 
-## Backend modules
+## High-level architecture
 
-- `server/src/routes/auth.routes.ts`: auth and token lifecycle
-- `server/src/routes/user.routes.ts`: profile, follow, block, report, public user views
-- `server/src/routes/post.routes.ts`: feed, explore posts, comments, reactions, save, share
-- `server/src/routes/status.routes.ts`: 24-hour status updates, views, replies, emoji reactions
-- `server/src/routes/reel.routes.ts`: short video publishing and engagement
-- `server/src/routes/voice-room.routes.ts`: live voice room lifecycle
-- `server/src/routes/chat.routes.ts`: direct and group messaging APIs
-- `server/src/routes/community.routes.ts`: legacy community support
-- `server/src/routes/social.routes.ts`: friends, pages, groups, onboarding, invites, feedback, discovery
-- `server/src/services/*.service.ts`: business logic by domain
-- `server/src/sockets/chat.socket.ts`: realtime message delivery, typing, seen updates
+```txt
+Mobile App (Expo / React Native)
+  -> REST API (Express)
+  -> Realtime events (Socket.IO)
+  -> Auth session storage
 
-Controllers stay thin. Validation happens at the route boundary with `zod`. Services own permission checks, graph logic, notifications, and feed/discovery ranking.
+Express API
+  -> Controllers
+  -> Services
+  -> Prisma ORM
+  -> PostgreSQL
 
-## Mobile modules
+Socket.IO
+  -> Chat rooms
+  -> Message delivery events
+  -> Typing and seen state
+```
 
-- `mobile/app/(tabs)/index.tsx`: upgraded feed with launch controls, onboarding, friend requests, page and group suggestions
-- `mobile/app/explore.tsx`: trending posts, active discussions, suggested users/pages/groups
-- `mobile/app/status.tsx`: WhatsApp/Facebook-style 24-hour status flow
-- `mobile/app/reels.tsx`: short-video feed
-- `mobile/app/voice-rooms.tsx`: IMO-style voice room listing and creation
-- `mobile/app/profile/[username].tsx`: follow, friend, message, mutual-friend profile loop
-- `mobile/services/social.ts`: mobile API wrapper for the new social graph endpoints
-- `mobile/services/posts.ts`, `mobile/services/chat.ts`, `mobile/services/users.ts`: existing content and messaging clients
-- `mobile/types/domain.ts`: shared domain contracts for posts, relationships, pages, groups, launch data, and explore data
+## Monorepo layout
 
-## Database schema
+```txt
+mobile/
+server/
+scripts/
+tools/
+```
 
-The expanded Prisma schema now includes:
+## Mobile architecture
 
-- `User`
-- `Profile`
-- `FriendRequest`
-- `Friendship`
-- `Page`
-- `PageFollower`
-- `Group`
-- `GroupMember`
-- `Status`
-- `StatusView`
-- `StatusReaction`
-- `Reel`
-- `ReelLike`
+The mobile app is built with Expo Router, React Native, TypeScript, React Query, and Zustand.
+
+### Main responsibilities
+
+- screen routing
+- auth boot and session hydration
+- API integration
+- server-state caching
+- realtime chat bridge
+- UI components and reusable presentation logic
+
+### Important mobile layers
+
+- `mobile/app/`: route screens
+- `mobile/components/`: shared UI and feature components
+- `mobile/services/`: API and runtime integration
+- `mobile/store/`: Zustand state stores
+- `mobile/types/`: shared client-side types
+- `mobile/utils/`: helpers, storage, logging, and error normalization
+
+### Key entry points
+
+- `mobile/app/_layout.tsx`: app shell, QueryClient, error boundaries, auth hydration, realtime bridge
+- `mobile/app/(tabs)/index.tsx`: feed screen
+- `mobile/services/api.ts`: Axios client, auth header injection, refresh retry flow
+- `mobile/services/runtime-config.ts`: runtime API and socket URL resolution
+- `mobile/store/auth-store.ts`: auth session state
+- `mobile/store/chat-store.ts`: chat-related client state
+
+### Current surfaced mobile screens
+
+The app currently includes routes for:
+
+- auth
+- onboarding
+- feed
+- chats
+- create
+- notifications
+- profile
+- explore
+- friends
+- pages
+- groups
+- marketplace
+- moderation
+- reels
+- status
+- saved posts
+- settings
+
+## Backend architecture
+
+The backend is an Express application written in TypeScript. It exposes REST endpoints under `/api` and runs a Socket.IO server on the same HTTP server.
+
+### Backend layers
+
+- `server/src/routes/`: route registration and endpoint grouping
+- `server/src/controllers/`: HTTP request/response handling
+- `server/src/services/`: business logic and permission checks
+- `server/src/middleware/`: auth, rate limit, request logging, upload, error handling
+- `server/src/lib/`: Prisma client, environment loading, logger, realtime server registry
+- `server/src/utils/`: API error helpers, validation helpers, JWT logic
+- `server/src/sockets/`: realtime socket handlers
+
+### Runtime flow
+
+1. Request enters Express app.
+2. Middleware applies CORS, helmet, request IDs, logging, body parsing, cookies, and rate limiting.
+3. Route dispatches to a controller.
+4. Controller calls a service.
+5. Service reads or writes through Prisma.
+6. Service may emit notifications or realtime events.
+7. Error middleware normalizes failures into API responses.
+
+### API modules currently mounted
+
+These route groups are active today:
+
+- `/auth`
+- `/users`
+- `/posts`
+- `/chat`
+- `/notifications`
+- `/media`
+- `/marketplace`
+- `/monetization`
+- `/stories`
+- `/moderation`
+- `/social`
+- `/status`
+- `/reels`
+
+Health check:
+
+- `GET /api/health`
+
+## Authentication architecture
+
+Authentication is JWT-based.
+
+### Components
+
+- login, register, refresh, logout endpoints
+- access token and refresh token flow
+- refresh token persistence in the database
+- auth middleware for protected routes
+
+### Behavior
+
+- access tokens authorize API requests
+- refresh tokens are stored server-side and can be revoked
+- the mobile client retries expired requests through the refresh flow
+- protected routes read user identity from bearer tokens
+
+## Realtime architecture
+
+Realtime behavior is currently centered on chat.
+
+### Current capabilities
+
+- joining conversation rooms
+- sending messages
+- typing indicators
+- seen updates
+
+### Relevant files
+
+- `server/src/index.ts`
+- `server/src/sockets/chat.socket.ts`
+- `server/src/lib/realtime.ts`
+- `mobile/components/realtime-bridge.tsx`
+
+The persistence layer remains REST and database-backed, while Socket.IO handles live interaction.
+
+## Domain architecture
+
+The product is organized around a few major domains.
+
+### Identity and relationships
+
+- users
+- profiles
+- follow graph
+- friend requests
+- friendships
+- blocks
+
+### Content
+
+- posts
+- post likes
+- post comments
+- comment reactions
+- saved posts
+- shared posts
+
+### Ephemeral and media-driven content
+
+- stories
+- status updates
+- reels
+
+### Messaging
+
+- conversations
+- participants
+- messages
+- message delivery state
+
+### Social structures
+
+- pages
+- groups
+- communities
+- invites
+- onboarding and discovery data
+
+### Trust and safety
+
+- reports
+- moderation logs
+- role-based moderation actions
+
+### Commerce and monetization
+
+- wallets
+- wallet transactions
+- payment intents
+- premium plans and subscriptions
+- marketplace listings
+
+## Data architecture
+
+The database uses PostgreSQL through Prisma.
+
+### Important characteristics
+
+- the schema is broader than the currently visible screens
+- some models are fully active in API and mobile flows
+- some models are present for expansion and future surface area
+
+### Core active model groups
+
+- `User`, `Profile`, `RefreshToken`
+- `FriendRequest`, `Friendship`, `Follow`, `Block`
+- `Conversation`, `ConversationParticipant`, `Message`, `MessageStatus`
+- `Post`, `PostLike`, `PostComment`, `CommentReaction`, `SavedPost`
+- `Story`, `StoryView`
+- `Status`, `StatusView`, `StatusReaction`
+- `Reel`, `ReelLike`, `ReelComment`
+- `Notification`
+- `Page`, `PageFollower`
+- `Group`, `GroupMember`
+- `Report`, `ModerationLog`
+- `Wallet`, `WalletTransaction`, `PaymentIntent`
+- `PremiumPlan`, `PremiumSubscription`
+- `MarketplaceListing`, `MarketplaceListingImage`, `MarketplaceSavedListing`
+
+### Future-ready or partially surfaced model areas
+
+The schema also contains models such as:
+
 - `VoiceRoom`
 - `VoiceParticipant`
-- `Conversation` and `ConversationParticipant` as the active chat layer
-- `Message`
-- `MessageStatus`
-- `Post`
-- `PostComment`
-- `CommentReaction`
-- `PostLike`
-- `Notification`
-- `FeatureFlag`
-- `BetaAccess`
-- `ProductFeedback`
-- `Invite`
-- `InviteRedemption`
+- `GiftCatalogItem`
+- `RoomGiftEvent`
+- `CreatorLedgerEntry`
+- `AdPlacement`
 
-Existing models for follows, stories, saved posts, moderation, refresh tokens, and communities remain in place.
+These indicate planned or partially integrated expansion, but they should not be read as proof that full route and UI support already exists today.
 
-## Friend system logic
+## Feed and social graph behavior
 
-- Friend requests are created through `FriendRequest` with `PENDING`, `ACCEPTED`, `REJECTED`, or `CANCELED`.
-- Accepting a request creates mirrored `Friendship` rows so friend lookups stay fast.
-- Relationship lookup returns:
-  - `isFriend`
-  - `hasSentRequest`
-  - `hasIncomingRequest`
-  - `mutualFriendsCount`
-  - mutual-friend previews
-- Notifications are emitted for new requests and accepted requests.
-- Profile actions use this relationship state to drive `Add friend`, `Accept friend`, or `Friends`.
+The current architecture supports a blended social product rather than separate apps for separate modes.
 
-## Privacy system
+### Feed-related inputs
 
-Post and status visibility use first-class visibility rules:
+- user-authored posts
+- relationship graph
+- page and group context
+- comments and reactions
+- saved and shared content
 
-- `PUBLIC`
-- `FOLLOWERS`
-- `FRIENDS`
+### Discovery-related inputs
 
-The backend enforces access before content is listed or viewed:
+- social graph suggestions
+- explore endpoints
+- pages
+- groups
+- invites and onboarding recommendations
 
-- public content is visible to everyone with access to the app
-- follower content requires an actual follow edge
-- friend content requires an actual friendship edge
-- private-group post access additionally requires active group membership
+## Moderation architecture
 
-This is enforced in service-layer queries, not only in the mobile UI.
+Moderation is part of the main backend rather than a separate service.
 
-## Group system logic
+### Current moderation scope
 
-- Groups are stored in `Group` with `PUBLIC` or `PRIVATE` privacy.
-- Membership state is stored in `GroupMember`.
-- Group creation also creates a dedicated group conversation for basic group chat.
-- Public groups join immediately with `ACTIVE`.
-- Private groups enter `PENDING`, which is future-ready for approval workflows.
-- Group discovery surfaces member count, discussion volume, and chat linkage.
+- report intake
+- report listing
+- moderation overview and logs
+- content actions for posts, comments, reels, statuses, users, groups, pages, and listings
+- role checks for privileged actions
 
-## Messaging system
+## Environment and configuration
 
-- Direct chat uses `Conversation` with type `DIRECT`.
-- Multi-user chat uses `Conversation` with type `GROUP`.
-- Community-linked and group-linked realtime chat are future-ready on the same transport.
-- Messages support text, image, video, and audio media typing in schema.
-- `MessageStatus` tracks sent, delivered, and seen state per recipient.
-- Socket.IO already supports:
-  - join room
-  - send message
-  - typing indicators
-  - seen updates
+### Server
 
-Message payloads now support:
+Environment parsing and validation happen in `server/src/lib/env.ts`.
 
-- text
-- image URL
-- video URL
-- audio / voice-message URL
-- reply linkage
+Important configuration includes:
 
-The same conversation layer is positioned to support call signaling later without replacing the current chat model.
+- app environment
+- port
+- client origins
+- database URL
+- JWT secrets and expirations
+- Cloudinary settings
+- media upload size limits
 
-## Feed and explore logic
+### Mobile
 
-Feed ranking now blends:
+Mobile runtime configuration is resolved in `mobile/services/runtime-config.ts`.
 
-- the user’s own posts
-- friends’ posts
-- followed-account posts
-- followed-page posts
-- active discussions
-- freshness
-- prior interaction signals
-- quick-post boost for lightweight conversation content
+Important values include:
 
-Explore returns:
+- `EXPO_PUBLIC_APP_ENV`
+- `EXPO_PUBLIC_API_URL`
+- `EXPO_PUBLIC_SOCKET_URL`
 
-- trending posts
-- active discussions
-- suggested users
-- suggested pages
-- suggested groups
+## Local development architecture
 
-Posts now carry richer context:
+### Local services
 
-- `kind`: `STANDARD`, `QUICK`, or `SHARE`
-- optional page context
-- optional group context
-- `discussionLabel`
-- `scoreReason`
-- `shareSlug` for deep-link/share routing
+- PostgreSQL runs through `docker-compose.yml`
+- Prisma migrations live in `server/prisma/migrations/`
+- seed data lives in `server/prisma/seed.ts`
 
-## Status system
+### Main workflows
 
-Status uses dedicated `Status`, `StatusView`, and `StatusReaction` models.
+- `npm run db:up`
+- `npm run db:setup`
+- `npm run dev`
+- `npm run test:integration`
 
-- users can publish text, image, or video status
-- status expires automatically after 24 hours
-- viewers can react with emoji or short reply text
-- the owner can see viewer count and reaction activity
-- status visibility follows the same public/followers/friends backend rules as posts
+## Deployment architecture
 
-## Reels system
+### Backend deployment
 
-Reels uses dedicated `Reel` and `ReelLike` models.
+- Docker build: `Dockerfile`
+- Render config: `render.yaml`
+- Railway config: `railway.json`
 
-- each reel is a short-form vertical video record
-- explore/feed can surface recommended or trending reels
-- users can publish reels and like them
-- reels keep creator identity attached to the same follow/friend/profile graph
+### Operational notes
 
-## Voice room system
+- backend health check is `/api/health`
+- mobile runtime configuration is environment-driven
+- the API and realtime server share the same backend runtime
 
-Voice rooms use `VoiceRoom` and `VoiceParticipant`.
+## Design principles visible in the repo
 
-- a host creates a live room
-- participants join as listeners
-- participant state tracks listening, speaking, or muted
-- room activity generates meaningful notifications
-- the schema is future-ready for video-room expansion without replacing the voice-room model
+- monorepo ownership across client and server
+- thin controllers and service-oriented business logic
+- explicit domain modules instead of one large generic API
+- Prisma-managed relational data model
+- JWT auth with revocable refresh tokens
+- REST for persistence and Socket.IO for live chat behavior
 
-## Launch, onboarding, and growth loop
+## Scope clarification
 
-Launch-ready features added to the product:
+This document describes the architecture reflected by the current repository state.
 
-- feature flags through `FeatureFlag`
-- beta-user segmentation through `BetaAccess`
-- in-app feedback capture through `ProductFeedback`
-- invite generation and redemption through `Invite` and `InviteRedemption`
+It intentionally separates:
 
-Onboarding improves retention by immediately returning:
+- what is active in current routes and screens
+- what exists in the schema for future expansion
 
-- suggested users
-- suggested pages
-- suggested groups
-- pending friend-request context
-
-This reduces empty-feed risk and gives the user an immediate path to follow, friend, join, message, and reply.
-
-## Viral and growth loop
-
-The viral loop works like this:
-
-1. User creates content or joins a discussion.
-2. Reactions/comments/friend activity trigger meaningful notifications.
-3. The feed highlights active discussion and recent reply momentum.
-4. Users create invite links with `Join me on Faceme`.
-5. Shared posts and invite links route new users back into signup and onboarding.
-6. Onboarding seeds users, pages, and groups so the new user quickly enters the same loop.
-
-The growth loop works like this:
-
-1. Discovery surfaces people, pages, groups, and hot threads.
-2. Profiles expose follow, friend, and message actions.
-3. Group and page membership expand the feed graph.
-4. Notifications pull users back only for meaningful social events.
-5. Invite redemption and feedback collection support staged rollout and iteration without fake engagement.
-
-## Product identity
-
-Faceme is not implemented as a clone:
-
-- unlike Facebook, the feed is lighter and discussion-led rather than dense and utility-heavy
-- unlike Instagram, discovery is not purely visual and keeps pages, groups, and conversations first-class
-- unlike Twitter/X, quick posts sit inside a broader relationship and community system instead of replacing it
-
-The result is one hybrid platform centered on identity, discussion, media, and social belonging.
+That distinction matters because the codebase includes forward-looking models that do not always map to complete user-facing flows yet.
